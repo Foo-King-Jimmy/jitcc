@@ -1,0 +1,57 @@
+
+
+ - change LIBTCCAPI tag only front-func got it
+ - all other are static
+ - collect all needed files
+ - one-source them
+
+ - tcc_error/warning() usage -> use store to send msg
+
+
+  [ 100 % ]
+ ===========
+ (unused) TCC_OPTION_std
+ (unused) TCC_OPTION_pipe
+ (unused) TCC_OPTION_pedantic
+ (unused) TCC_OPTION_traditional
+ (unused) TCC_OPTION_s
+ (unused) il-gen.c
+ (unused) il-opcodes.h
+ (nonsense) M32 { crosscompilation } TCC_OPTION_m, OPT_M32, OPT_M64, tcc_tool_cross()
+ (nonsense) E { -E TCC_OPTION_E TCC_OUTPUT_PREPROCESS tcc_preprocess() +numerous funcs ppfp }
+ (bypass) set_environment()
+ (bypass) tcc_set_output_type()
+ (bypass) -o TCC_OPTION_o, cleaning usage of: s->outfile
+ (technical) -shared TCC_OPTION_shared
+ (nonsense) in tcc.c: default_outputfile()  // will use arg instead
+ (nonfunctional) doc-generation in Makefile
+ (nonfunctional) TCC_OPTION_print_search_dirs OPT_PRINT_DIRS print_search_dirs()
+ (nonfunctional) -v -vv TCC_OPTION_v OPT_V
+ (nonfunctional) TCC_OPTION_dumpversion
+ (nonfunctional) VERSION version[] TCC_VERSION (in Makefile, in configure)
+ (nonfunctional) TCC_OPTION_HELP2, OPT_HELP2, help[], help2[] in tcc.c
+ (nonfunctional) W warn-unsupported
+ (nopurpose) -w, TCC_OPTION_w, in tcc.c hard-coded: s->warn_none = 1  // will use tcc_warning() !
+ (nopurpose) s->run_test maybe_run_test()
+ (nopurpose) MF { gen_makedeps() TCC_OPTION_MF TCC_OPTION_MD s->gen_deps s->deps_outfile }
+ (nopurpose) ar { ARFMAG tcc_tool_ar ar_usage contains_any ArHdr le2belong TCC_OPTION_ar OPT_AR }
+ (( .a=.so, !.so preferred; we dont want create .a files ( bounded multiple object files ) .
+ (?) debug3 { -bt TCC_OPTION_bt tcc_set_num_callers CONFIG_TCC_BACKTRACE }  // (nopurpose)
+ (?) debug1 { -g TCC_OPTION_g s->do_debug }  // (nopurpose)
+ (?) s->verbose  // less usefull, can be developed for debug/devel/test
+ (?) TCC_OPTION_bench s->do_bench getclock_ms() tcc_print_stats()  // can be used for debug/test/devel
+ (?) .y { TCC_OPTION_nostdlib s1->nostdlib }  // (nopurpose)
+ (?) .x { TCC_OPTION_nostdinc s->nostdinc }  // hackable
+ (??) TCC_OUTPUT_EXE
+ (??) debug2 { -b TCC_OPTION_b s->do_bounds_check CONFIG_TCC_BCHECK }  // BUT implies -g
+ (??) --soname, TCC_OPTION_soname  // only important if we keep the output for long
+ (???) -r TCC_OPTION_r s->option_r  // for kernel hacking, implies OBJ
+ (???) -c TCC_OPTION_c TCC_OUTPUT_OBJ
+ (ontaste) TCC_OPTION_impdef, OPT_IMPDEF
+ (ontaste) win32, WIN32, WIN64, TCC_TARGET_PE
+ (choice) tcc_run() -run, TCC_OPTION_run, TCC_OUTPUT_MEMORY
+ (ratherno) tcc_warning()
+=============
+ [ DUBIOUS ]
+
+
