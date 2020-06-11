@@ -1,0 +1,302 @@
+
+PLAN:   JJBOUND { -b  }
+PLAN:   JJDEBUG { -g  }
+PLAN:   JJDEBUG { -bt }
+LATER:  -nostdlib
+LATER:  -nostdinc
+LATER:  -soname
+LATER:  W warnings 1-by-1 (etc,:  warn_unsupported )
+LATER:  -static TCC_OPTION_static s->static_link
+may check these:
+   5078 #define TCC_OUTPUT_FORMAT_BINARY 1 /* binary image output */
+   5079 #define TCC_OUTPUT_FORMAT_COFF   2 /* COFF */
+
+NO - potential problem:
+   tcc_add_support(s1, TCC_LIBTCC1); in tcc_add_runtime() !
+   BUT libtcc1.a not created   while make -ing
+   NO we use libgcc.so
+   BUT can be TYPEd:
+   make <target>-libtcc1-usegcc=yes
+   make   x86_64-libtcc1-usegcc=yes
+ALSO bound-checking may !MAY only work w libtcc1.a (see tcc.c grep libtcc1 !)
+
+ ??? further things to eliminate in tcc.h: in TCCState*: eg. filespec, etc.
+ ??? may remove custom error_func(func-pointer) /TCCState members
+ ??? may hard-code CONFIG_LIB/INCL/SYSINCL settings
+ ??? may pass them as-ready through fork()
+
+outputing:
+[- verbose]PLAN: check all set ting of s->verbose
+[- bench  ]PLAN: JJTIMER { -bench }
+[- warning]default: -w warnings TCC_OPTION_w s->warn_none = 1
+ - error   tcc_warning/_error
+
+/// server:
+install: /usr/local/lib/tcc
+include: /usr/local/lib/tcc/include /usr/local/include /usr/include
+libraries: /usr/lib /lib /usr/local/lib
+libtcc1: /usr/local/lib/tcc/libtcc1.a
+crt: /usr/lib
+elfinterp: /lib64/ld-linux-x86-64.so.2
+
+ ! USAGE:  $ make x86_64-libtcc1-usegcc=yes
+ ! will need to include jitcc.h into SERVER !
+
+
+
+
+
+
+
+
+
+warning: assignment discards ‘const’ qualifier from pointer
+     s->outfile = outputfile;
+warning: ‘stabstr_section’ defined but not used [-Wunused-variable]
+warning: ‘stab_section’ defined but not used [-Wunused-variable]
+warning: ‘last_ind’ defined but not used [-Wunused-variable]
+warning: ‘last_line_num’ defined but not used [-Wunused-variable]
+
+THESE above can be put between ifdef endif
+GDEBUG BACKTRACE
+see them
+
+
+
+outfile ->outfile   to few  may eliminate somewhat
+
+
+start writing main-wrapper test program
+
+
+rewind( the dbg file at the end of jitcc() if you want
+but not very need
+cuz we can ftello() and straight away know its size and send dbg http message
+
+
+
+
+===x24
+>>> Binary file sizes:
+    -O2 -flto :  246xxx
+    -03 -flto :  278xxx
+    -Os -flto :  178xxx
+> > >  [ READY ]
+> Checking Main() aka jitcc()
+> tcc_error() ready NOW.  w memfd_create() and retval setting.
+> Temporarily disabled custom error_func/_opaq in tcc.c/.h
+===x23
+> cleanuped global vars created by me
+> long/setjmp/jmp_buf things go global
+> found logic problem in original tcc
+  main>tcc_new>tcc_mallocz>tcc_malloc>malloc
+  if malloc fails>tcc_error>error1> no reference to s1-> [things]
+===x22
+> in tcc.c: tcc_error() treat output by memfd_create()
+>           set properly s->retval according to this TABLE:
+     0+fd      == non-negative file-descriptor (error-file-content)
+     - w ae ne == nothing | warning | aborterror | noaborterror
+     NULL GIVN == dbgfh param was NULL | was GIVEN
+      __________________________________________
+     |                                          |
+     |         -    w    ae     ne              |
+     | NULL   -1   -2   0+fd   0+fd             |
+     | GIVN   -1   -2   0+fd   0+fd  < fileno() |
+     |                                          |
+     | Other no-output-errors  =>  -3 or lower  |
+     |__________________________________________|
+> Rewriting longjmp()/setjmp()/_jmp_buf/_jmp_var/enabled code parts
+===x21
+> checking all s->verbose, exit()'s exitcode
+> writing tcc.c Main jitcc() all over
+> Changing warn_none to do_warn (the opposite of it)
+===x20
+> Changing warn_none to warn_no_none (the opposite of it)
+> Removing TCC_OPTION_w [ it is default ]
+> transform error1() into final tcc_error( int, string, ... )
+> tcc_error(   "...")  transformed into  tcc_error(-1, )
+> tcc_error_noabort()  transformed into  tcc_error(1,  )
+> tcc_warning()        transformed into  tcc_error(0,  )
+> expect() transformed back to tcc_error()
+> Deleting (#define) NORETURN
+===x19
+> Changes in Makefile and in lib/Makefile
+===x18
+> Config-out TCC_OPTION_g  -g  CONFIG_TCC_GDEBUG    (Dont want to deal w it.)
+>       -out put_stabs()
+>       -out put_stabs_r()
+>       -out put_stabn()
+>       -out put_stabd()
+>       -out tcc_debug_start()
+>       -out tcc_debug_end()
+>       -out tcc_debug_funcstart()
+>       -out tcc_debug_funcend()
+>       -out tcc_debug_line()
+>       -out tccelf_stab_new()
+>       -out -b implies -g
+> Config-out TCC_OPTION_b  -b  CONFIG_TCC_BCHECK    (Dont want to deal w it.)
+> Config-out TCC_OPTION_bt -bt CONFIG_TCC_BACKTRACE (Dont want to deal w it.)
+> Eliminate  s->argc, s->argv  of TCCState*
+> Eliminate  @listfile  args_parser_listfile()
+===x17
+> Creating jitcc.h JITCC_H JITCC_API
+> (PLAN) JITCCAPI vs. static / public functions
+>        make all functions STATIC and only 1 API non-static
+> T  check if any 'static' deleted in front of a func (w readelf/nm)
+  |  https://stackoverflow.com/questions/30714646/
+  |  https://stackoverflow.com/questions/5108079/
+===x16
+> changed main in tcc.c into Main()  [ because of -shared ]
+> changed configure [no:-g changed CFLAGS & LDFLAGS]
+> changed Makefile [-flto/-fPIC/ONE_SOURCE/only tcc.o & tcc => tcc.so]
+===x15
+> changed/revisited configure [-flto no:-g changed CFLAGS & LDFLAGS]
+> changed/revisited Makefile [ONE_SOURCE/only tcc.o & tcc]
+> NOW  +cleanup/removing lib in Makefile  ( No build in  ./lib  afterwards )
+>      +[ therefore no bcheck.c va_list.c , etc. ]
+> > > NOTE:  ONE_SOURCE to ENABLE:  $ make ONE_SOURCE=yes  [ now default ]
+> (make) in Makefile make ONE_SOURCE=yes the default behaviour
++cleanup libtcc.c libtcc.h in Makefile
+> (safetry) Deleting tcclib.h in TOP-folder  (an unchanged file actually)
+> (inlining) libtcc.c into tcc.c     ( and )
+> (inlining) libtcc.h into tcc.h
+===x14
+===x13
+> (TIDY:) (FILE *) jjdbgfh yet undeclared
+> (TIDY:) Lingering code at the end of main in tcc.c
+===x12
+> (inlining) into   tcc.c:  tcc_set_output_type()
+> (inlining) in(to) tcc.c:  tcc_print_stats()
+> (inlining) in     tcc.c:  getclock_ms()
+> (nonsense) E { ppfp s->ppfp }
+> (inlining) in(to) tcc.c:  set_environment()
+===x11
+===x10
+> Removing (unused) func in libtcc.c: ‘tok_print’
+> Removing (unused) func in libtcc.c: ‘fill_got_entry'
+> Removing (unused) func in libtcc.c: ‘define_print’
+> Removing (unused) func in libtcc.c: ‘pp_line'
++cleanup x86_64-gen.c in Makefile !
++cleanup x86_64-link.c in Makefile !
++cleanup i386-gen.c in Makefile !
++cleanup i386-link.c in Makefile !
++cleanup tccgen.c in Makefile !
++cleanup i386-tok.h in Makefile !
++cleanup i386-asm.c in Makefile !
++cleanup tccrun.c in Makefile !
++cleanup tccpp.c in Makefile !
++cleanup tccelf.c in Makefile !
++cleanup tccasm.c in Makefile !
++cleanup tcctools.c in Makefile !
+> Cleanup Makefile
+===x09
+> rm     i386-gen.c i386-link.c x86_64-gen.c x86_64-link.c
+> ONE_SOURCING i386-gen.c
+> ONE_SOURCING i386-link.c
+> ONE_SOURCING x86_64-gen.c
+> ONE_SOURCING x86_64-link.c
+> Removing (unused) func in    tcc.c: ‘print_dirs’
+> Removing (unused) var  in libtcc.c: ‘options_m’
+> Removing (unused) func in libtcc.c: ‘bind_libs_dynsyms’
+> Removing (unused) func in libtcc.c: ‘bind_exe_dynsyms’
+> Removing (unused) func in libtcc.c: ‘fill_got’
+> Removing (unused) func in libtcc.c: ‘pp_check_he0xE’
+> Removing (unused) func in libtcc.c: ‘pp_need_space’
+> Removing (unused) func in libtcc.c: ‘pp_debug_builtins’
+> Removing (unused) func in libtcc.c: ‘pp_debug_defines’
+===x08
+> (??) TCC_OUTPUT_EXE   ! REMOVING !
+===x07
+===x06
+> (nonsense) in tcc.c: default_outputfile()  // will use arg instead
+> (bypass) -o TCC_OPTION_o, cleaning usage of: s->outfile
+===x05
+> (nonfunctional) OPT_V
+> () in libtcc.c remove var 'tool' label 'extra_action'
+> (nopurpose) ar { ARFMAG tcc_tool_ar ar_usage contains_any ArHdr }
+> (nopurpose) ar { le2belong TCC_OPTION_ar OPT_AR }
+> (( .a=.so, !.so preferred; we dont want create .a files ))
+> (nonfunctional) -v -vv TCC_OPTION_v
+> (technical) -shared TCC_OPTION_shared
+===x04
+$ rm     VERSION
+> (NOTE) DO NOT include tcctok.h (into tcc.h)
+> (STAYS) set_flag()
+> (nonsense) E { tcc_preprocess() }
+> (ontaste) tcc_tool_impdef()
+> (nonsense) -dt -dD -DM s->dflag (int) g_debug
+> (nonsense) -P -P1 TCC_OPTION_P s->Pflag  // PreProc shit
+> (nopurpose) s->run_test maybe_run_test()
+> (nonsense) E { -E TCC_OPTION_E TCC_OUTPUT_PREPROCESS }
+> (nonfunctional) VERSION version[] TCC_VERSION (in Makefile, configure)
+> (ontaste) win32, WIN32, WIN64, TCC_TARGET_PE
+> (ontaste) TCC_OPTION_impdef, OPT_IMPDEF
+> (nonfunctional) OPT_PRINT_DIRS print_search_dirs()
+> (nonfunctional) TCC_OPTION_print_search_dirs
+> (nonsense) M32 { crosscompilation } TCC_OPTION_m, OPT_M32, OPT_M64
+> (nonsense) M32 { crosscompilation } tcc_tool_cross()
+> (nopurpose) MF { gen_makedeps() TCC_OPTION_MF TCC_OPTION_MD }
+> (nopurpose) MF { s->gen_deps s->deps_outfile }
+> (nonfunctional) TCC_OPTION_HELP2, OPT_HELP2, help[], help2[] in tcc.c
+> (nonfunctional) TCC_OPTION_dumpversion
+> Remove (nonfunctional) doc-generation in Makefile
+> Remove (unused) TCC_OPTION_pipe
+> Remove (unused) TCC_OPTION_pedantic
+> Remove (unused) TCC_OPTION_traditional
+> Remove (unused) TCC_OPTION_std
+> Remove (unused) TCC_OPTION_s
+===x03
+$ rm     tccpp.c
+$$vi into libtcc.c included tccpp.c
+$ rm     tccgen.c
+$$vi into libtcc.c included tccgen.c
+$ rm     tccelf.c
+$$vi into libtcc.c included tccelf.c
+$ rm     tccrun.c
+$$vi into libtcc.c included tccrun.c
+$ rm     stab.def
+$$vi into tcc.h[stab.h] included stab.def
+$ rm     i386-tok.h
+$$vi into tcctok.h included i386-tok.h
+$ rm     stab.h
+$$vi into tcc.h included stab.h
+$ rm     elf.h
+$$vi into tcc.h included elf.h
+$ rm     i386-asm.c
+$$vi into libtcc.c included i386-asm.c
+$ rm     tccams.c
+$$vi into libtcc.c included tccasm.c
+$ rm     tcctools.c
+$$vi into tcc.c included tcctools.c
+$rm    coff.h il-*.? RELICENSING Changelog TODO
+$rm -r win32 texi2pod.pl tests tcc-doc.* examples COPYING README
+$rm -r CodingStyle arm*.c .gitignore tcccoff.c tccpe.c c67-*.c
+===x02
+===x01
+===x00
+====================================================
+ - change LIBTCCAPI tag only front-func got it
+ - all other are static
+ - collect all needed files
+ - one-source them
+
+ - tcc_error/warning() usage -> use store to send msg
+
+ (nonfunctional) W warn_unsupported
+ (bypass) set_environment()
+! default output type
+!(bypass) tcc_set_output_type()
+ (nopurpose) -w, TCC_OPTION_w, in tcc.c hard-coded: s->warn_none = 1  // will use tcc_warning() !
+====================================================
+ (?) debug3 { -bt TCC_OPTION_bt tcc_set_num_callers CONFIG_TCC_BACKTRACE }  // (nopurpose)
+ (?) debug1 { -g TCC_OPTION_g s->do_debug }  // (nopurpose)
+ (?) s->verbose  // less usefull, can be developed for debug/devel/test
+ (?) TCC_OPTION_bench s->do_bench getclock_ms() tcc_print_stats()  // can be used for debug/test/devel
+ (?) .y { TCC_OPTION_nostdlib s1->nostdlib }  // (nopurpose)
+ (?) .x { TCC_OPTION_nostdinc s->nostdinc }  // hackable
+ (??) debug2 { -b TCC_OPTION_b s->do_bounds_check CONFIG_TCC_BCHECK }  // BUT implies -g
+ (??) --soname, TCC_OPTION_soname  // only important if we keep the output for long
+ (???) -r TCC_OPTION_r s->option_r  // for kernel hacking, implies OBJ
+ (???) -c TCC_OPTION_c TCC_OUTPUT_OBJ
+ (choice) tcc_run() -run, TCC_OPTION_run, TCC_OUTPUT_MEMORY
+ (ratherno) tcc_warning()
