@@ -48,8 +48,6 @@ elfinterp: /lib64/ld-linux-x86-64.so.2
 
 
 
-
-
 warning: assignment discards ‘const’ qualifier from pointer
      s->outfile = outputfile;
 warning: ‘stabstr_section’ defined but not used [-Wunused-variable]
